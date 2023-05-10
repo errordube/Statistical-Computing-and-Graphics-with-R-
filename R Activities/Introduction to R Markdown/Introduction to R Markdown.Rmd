@@ -1,0 +1,69 @@
+---
+title: "Introduction to R Markdown"
+author: "Aditya Dube"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Section 1
+
+First-Level Header
+
+## Section 2
+
+Second-Level Header
+
+
+### Section 3
+
+Third Level Header
+
+A real life example for NLP (Natural Language Processing) is [Google Homepage](https://www.google.com/)
+
+
+This is how you make your word in Italics *Italicized text*, This is how you make text bold **Bold text** , In-Line code example is `r "Hello World"`.   
+
+We can also use Superscript: x^2^ and Subscript: H~2~O.
+
+```{r uptownChunk, echo = FALSE, eval = TRUE}
+knitr::include_graphics("https://raw.githubusercontent.com/dilernia/STA418-518/main/uptownFunk.png")
+
+```
+
+## Scatter Plot
+
+```{r Scatter Plot, fig.align='center', fig.height=3, fig.width=6}
+mtcars %>% ggplot(aes(x = mpg, y = hp)) + geom_point()
+```
+
+## In-Line R Code
+
+```{r For In-Line Code}
+xbar <- 2
+se <- 1.3
+```
+
+The 95% confidence interval for the mean is (`r xbar - 1.96*se`, `r xbar +
+1.96*se`)
+
+## Tables 
+```{r tables}
+# Nicely format column names
+my.table <- mtcars[1:5, 1:4]
+colnames(my.table) <- c("MPG", "Cylinders",
+                        "Displacement", "Horsepower")
+```
+
+In-Line R Code
+
+`r knitr::kable(my.table, digits = c(1, 0, 0, 0), align = c('l', 'r', 'r', 'r'),  row.names = TRUE)`
+
+`r flextable::flextable(my.table, cwidth = 1.15)`
+
+
