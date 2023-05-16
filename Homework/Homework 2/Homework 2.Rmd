@@ -1,0 +1,132 @@
+---
+title: "Homework 2"
+author: "Aditya Dube"
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output: html_document
+---
+
+# Question 1 Parts 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+```
+
+## Loading Packages 
+
+```{r message = FALSE, warning=FALSE}
+library(data.table)
+library(tidyverse)
+library(knitr)
+library(arrow)
+library(bench)
+library(ggbeeswarm)
+library(haven)
+```
+# Question 2 Parts 
+
+## Importing Dataset 
+
+```{r }
+swiftSongs = read.csv(
+  "https://raw.githubusercontent.com/dilernia/STA418-518/main/Data/swiftSongs.csv"
+)
+```
+
+## Print a single table of the swiftSongs data containing the last 13 rows of the data using the slice_tail() function and the 30th through 34th columns using the select() function from the dplyr package.
+
+```{r }
+swiftSongs %>% dplyr::select(30:34) %>% 
+  slice_tail(n = 13) %>% kable()
+```
+
+## Import data on Taylor Swift songs directly from the URL using the read.csv(), read_csv(), and the fread() functions, comparing the read times using the mark function from the bench package, storing the results of the mark function in an object called readTimes. Specify a minimum of 5 iterations in the mark function.
+
+```{r }
+readTimes <-
+  mark(
+    read.csv(
+      "https://raw.githubusercontent.com/dilernia/STA418-518/main/Data/swiftSongs.csv"
+    ),
+    read_csv(
+      "https://raw.githubusercontent.com/dilernia/STA418-518/main/Data/swiftSongs.csv",
+      show_col_types = FALSE
+    ),
+    fread(
+      "https://raw.githubusercontent.com/dilernia/STA418-518/main/Data/swiftSongs.csv"
+    ),
+    check = FALSE,
+    min_iterations = 5
+  )
+ggObj <- plot(readTimes)
+
+importTimes <- ggObj$data %>% mutate(expression =
+                                       paste0(map_chr(str_split(expression, pattern = "[(]"), 1), "()"))
+# Printing table
+importTimes %>% arrange(desc(median)) %>%
+  select(expression:mem_alloc) %>% distinct() %>% knitr::kable()
+
+```
+
+## Create a violin plot to display the varying speeds of the three different functions for importing the data. 
+
+```{r }
+importTimes %>% ggplot(aes(x = time, y = fct_reorder(expression, time))) +
+  geom_violin(fill = "dodgerblue") +
+  geom_jitter(
+    height = 0.2,
+    pch = 21,
+    fill = "black",
+    color = "white"
+  ) +
+  labs(title = "Comparison of read times", y = "", x = "Run time") +
+  theme_bw()
+```
+
+## Based on the violin plot, which function was typically the fastest?
+
+## Answer: fread() function was the fastest.
+
+# Question 3 Parts
+
+## Export data on Taylor Swift songs in the swiftSongs data set using the write.csv(), write_csv(), and the fwrite() functions, comparing the write times using the mark function from the bench package, storing the results of the mark function in an object called writeTimes. Specify a minimum of 5 iterations in the mark function.
+
+```{r }
+
+writeTimes <-
+  mark(
+    write.csv(swiftSongs, "swiftSongs.csv"),
+    write_csv(swiftSongs, "swiftSongs.csv"),
+    fwrite(swiftSongs, "swiftSongs.csv"),
+    min_iterations = 5,
+    check = FALSE,
+    memory = FALSE
+  )
+
+ggObj <- plot(writeTimes)
+
+exportTimes <- ggObj$data %>% mutate(expression =
+                                       paste0(map_chr(str_split(
+                                         expression, pattern = "[(]"
+                                       ), 1), "()"))
+# Printing table
+exportTimes %>% arrange(desc(median)) %>%
+  select(expression:mem_alloc) %>% distinct() %>% knitr::kable()
+```
+## Create a violin plot to display the varying speeds of the three different functions for exporting the data. 
+
+```{r }
+exportTimes %>% ggplot(aes(x = time, y = fct_reorder(expression, time))) +
+  geom_violin(fill = "dodgerblue") +
+  geom_jitter(
+    height = 0.2,
+    pch = 21,
+    fill = "black",
+    color = "white"
+  ) +
+  labs(title = "Comparison of write times", y = "", x = "Run time") +
+  theme_bw()
+```
+
+## Based on the violin plot, which function was typically the fastest?
+
+## Answer: fwrite() is the fastest
