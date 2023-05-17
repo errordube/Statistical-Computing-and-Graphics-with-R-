@@ -1,0 +1,246 @@
+---
+title: "Intermediate ggplot2"
+author: "Aditya Dube"
+header-includes:
+  \usepackage{fvextra}
+  \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Loading Packages
+
+```{r }
+library(riskCommunicator)
+library(tidyverse)
+library(skimr)
+library(knitr)
+library(ggthemes)
+library(patchwork)
+```
+
+## First, let’s load the FHS data set from the riskCommunicator package
+
+```{r }
+data(framingham, package = "riskCommunicator")
+glimpse(framingham)
+
+```
+
+## Select the first 10 variables from the Framingham dataset and store it as a new data frame called framinghamSub using the select() function. Also, update the SEX variable to have the values “Male” and “Female” rather than 1 and 2, and the CURSMOKE variable to have the values “Yes” and “No” rather than 1 and 0 using the mutate() and case_when() functions. This should be your new dataset to be used for the rest of the assignment.
+
+
+```{r }
+framinghamSub <- framingham %>% select(1:10) %>%  mutate(
+  SEX = case_when(SEX == 1 ~ "Male",
+                  SEX == 2 ~ "Female",
+                  TRUE ~ as.character(SEX)),
+  CURSMOKE = case_when(
+    CURSMOKE == 1 ~ "Yes",
+    CURSMOKE == 0 ~ "No",
+    TRUE ~ as.character(CURSMOKE)
+  )
+)
+```
+
+## Use the skim() function from the skimr package to explore other characteristics of the subset of the data.
+
+```{r }
+skim(framinghamSub)
+```
+
+
+## Make a scatter plot between diastolic (DIABP) and systolic (SYSBP) blood pressure with a “facet” by the sex of the participant (SEX). Also manually set the alpha aesthetic to be 0.2. After the next few bullets is an example
+
+```{r }
+ggplot(data = framinghamSub, mapping = aes(x = SYSBP, y = DIABP)) + geom_point(alpha = 0.20) + facet_grid(. ~ SEX)
+
+```
+
+## Also include the size of the data points as mapped by the number of cigarettes smoked per day (CIGPDAY), add a color-blind friendly palette for coloring the points based on the sex of each participant, and position the legend at the bottom of the plot.
+
+```{r }
+ggplot(data = framinghamSub,
+       mapping = aes(
+         x = SYSBP, y = DIABP,
+         size = CIGPDAY,
+         color = SEX
+       )) + geom_point(alpha = 0.20) + facet_grid(. ~ SEX) + scale_color_viridis_d() + labs(
+         title = "Systolic by diastolic blood pressure" ,
+         x = "Systolic BP" ,
+         y = "Diastolic BP",
+         caption = "Data source: Framingham Heart Study & the riskCommunicator package "
+       ) + theme(legend.position = "bottom")
+```
+
+
+## Add a line of best fit corresponding to a simple linear regression model fit separately for males and females using geom_smooth().
+
+
+```{r }
+scatter <- ggplot(data = framinghamSub,
+       mapping = aes(
+         x = SYSBP,
+         y = DIABP,
+         size = CIGPDAY,
+         color = SEX
+       )) + geom_point(alpha = 0.20) + facet_grid(. ~ SEX) + scale_color_viridis_d() + labs(
+         title = "Systolic by diastolic blood pressure" ,
+         x = "Systolic BP" ,
+         y = "Diastolic BP",
+         caption = "Data source: Framingham Heart Study & the riskCommunicator package ", size = "Cigarettes smoked per day"
+       ) + guides(color = FALSE) + geom_smooth(se = FALSE, method = "lm", size = 1) + theme_bw() + theme(legend.position = "bottom")
+
+scatter
+```
+
+## Next, create a side-by-side box-plot where the y-axis is total cholesterol (TOTCHOL) and the x-axis is current smoking status (CURSMOKE). Make all axis and title text bold in the plot.
+
+```{r }
+ggplot(
+  data = framinghamSub,
+  mapping = aes(
+    x = CURSMOKE,
+    y = TOTCHOL,
+  )
+) + geom_boxplot() + labs(
+  title = "Total cholesterol by smoking status" ,
+  x = "Current smoker" ,
+  y = "Serum Total Cholesterol (mg/dL)",
+  caption = "Data source: Framingham Heart Study & the riskCommunicator package "
+)  +
+  theme(
+    text = element_text(face = "bold"))
+
+```
+
+
+
+## Add a complete theme from ggthemes, color the boxes based on smoking status, remove the legend, and make the axis titles bold and change the font size as well.
+
+```{r }
+ggplot(
+  data = framinghamSub,
+  mapping = aes(
+    x = CURSMOKE,
+    y = TOTCHOL,
+    fill = CURSMOKE
+  )
+) + geom_boxplot() + scale_fill_viridis_d() + labs(
+  title = "Total cholesterol by smoking status" ,
+  x = "Current smoker" ,
+  y = "Serum Total Cholesterol (mg/dL)",
+  caption = "Data source: Framingham Heart Study & the riskCommunicator package "
+)   + theme_economist() +
+  theme(
+    text = element_text(face = "bold"), legend.position = "none",  axis.title = element_text(size = 14))
+
+```
+
+
+## In a new plot, modify the side-by-side box-plots we created to be faceted by the sex of the participant using the facet_grid() function and columns to break up the subplots.
+
+```{r }
+ggplot(
+  data = framinghamSub,
+  mapping = aes(
+    x = CURSMOKE,
+    y = TOTCHOL,
+    fill = CURSMOKE
+  )
+) + geom_boxplot() + facet_grid(. ~ SEX) + scale_fill_viridis_d() + labs(
+  title = "Total cholesterol by smoking status" ,
+  x = "Current smoker" ,
+  y = "Serum Total Cholesterol (mg/dL)",
+  caption = "Data source: Framingham Heart Study & the riskCommunicator package "
+)   + theme_economist() +
+  theme(
+    text = element_text(face = "bold"), legend.position = "none",  axis.title = element_text(size = 14))
+```
+
+
+## Make a line graph that shows the average cigarettes per day (CIGPDAY) by age (AGE), with separate lines by the sex of the participant (SEX).
+
+
+```{r }
+framinghamSub %>% ggplot() + stat_summary(aes(x= AGE, y= CIGPDAY, group = SEX, color = SEX), geom = "line", size = 1, fun.y = mean)
+```
+
+
+## Apply a complete theme to the plot, and have the axis show the breaks at 0, 4, 8, 12, and 16 cigarettes per day.
+
+```{r }
+lineChart <- framinghamSub %>% ggplot() + stat_summary(aes(x= AGE, y= CIGPDAY, group = SEX, color = SEX), geom = "line", size = 1, fun.y = mean) +
+  labs(title = "Average cigarettes per day by age and sex" ,
+  x = "Age" ,
+  y = "Average cigarettes per day",
+  color = "Sex") + scale_color_colorblind() + scale_y_continuous(breaks=c(0,4,8,12,16)) + theme_bw()
+
+lineChart
+```
+
+
+## Combine the line chart and the faceted scatter plots together into a single graphic using the patchwork package, with 1 plot per row and the line chart on top.
+
+
+```{r}
+lineChart / scatter
+```
+
+
+
+## Bin / categorize total cholesterol levels is as Normal (<200 mg/dL), Borderline high (200 to 239 mg/dL), or High (> 240 mg/dL). 
+
+```{r }
+framinghamSub <- framinghamSub %>% 
+  mutate(CholesterolCat = case_when(TOTCHOL < 200 ~ "Normal",
+                                    TOTCHOL >= 200 &  TOTCHOL < 240 ~ "Borderline high",
+                                    TOTCHOL > 240 ~ "High",
+                         TRUE ~ as.character(NA)))
+
+```
+
+
+## Create a bar chart displaying the number of participants falling in each cholesterol category based on Johns Hopkins’ definitions using geom_bar(). Also, remove people under 40 and those without recorded cholesterol levels (missing values for CholesterolCat) from the plot by using the code filter(AGE >= 40, !is.na(CholesterolCat)) when piping the data into each subsequent ggplot() call.
+
+
+```{r }
+framinghamSub %>%  filter(AGE >= 40, !is.na(CholesterolCat)) %>% ggplot(aes(x=CholesterolCat)) + geom_bar()
+
+```
+
+## Recreate the bar chart, this time reordering the categories to show Normal, Borderline high, and then High from left to right using the fct_relevel() function.
+
+```{r }
+framinghamSub %>%  filter(AGE >= 40, !is.na(CholesterolCat)) %>% ggplot(aes(x=fct_relevel(CholesterolCat, "Normal", "Borderline high", "High"))) + geom_bar() 
+
+```
+
+
+## Change the color of the inside of the bars based on the cholesterol category using a color-blind friendly palette, make the outline of the bars black in color, facet by the sex of the participant, and remove the legend.
+
+
+```{r }
+framinghamSub %>%  filter(AGE >= 40, !is.na(CholesterolCat)) %>% ggplot(aes(x=fct_relevel(CholesterolCat, "Normal", "Borderline high", "High"), fill = CholesterolCat ))  +
+  labs(title = "Distribution of cholesterol levels, Age 40+" ,
+  x = "Cholesterol level" ,
+  y = "Count", 
+  caption = "Data source: Framingham Heart Study & the riskCommunicator package") + facet_grid(. ~ SEX) + scale_fill_viridis_d()+ theme_bw()  + geom_bar(color = "black") + theme(legend.position = "none")
+
+```
+
+## Lastly, use the coord_flip() function to turn the bar chart into a horizontal bar chart instead
+
+```{r }
+framinghamSub %>%  filter(AGE >= 40, !is.na(CholesterolCat)) %>% ggplot(aes(x=fct_relevel(CholesterolCat, "Normal", "Borderline high", "High"), fill = CholesterolCat ))  +
+  labs(title = "Distribution of cholesterol levels, Age 40+" ,
+  x = "Cholesterol level" ,
+  y = "Count", 
+  caption = "Data source: Framingham Heart Study & the riskCommunicator package") + facet_grid(. ~ SEX) + scale_fill_viridis_d()+ theme_bw()  + geom_bar(color = "black") + theme(legend.position = "none") + coord_flip()
+```
