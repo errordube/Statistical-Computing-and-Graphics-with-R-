@@ -1,0 +1,161 @@
+---
+title: "Introduction to ggplot2"
+author: "Aditya Dube"
+header-includes:
+  \usepackage{fvextra}
+  \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning=FALSE, error = TRUE)
+```
+
+## Loading Packages
+
+```{r}
+library(palmerpenguins)
+library(tidyverse)
+library(knitr)
+library(dplyr)
+library(skimr)
+```
+
+## Loading Dataset
+
+```{r }
+data(penguins, package = "palmerpenguins")
+glimpse(penguins)
+```
+
+## First Start with blank canvas
+
+```{r }
+ggplot(data = penguins)
+```
+
+## Next add an x-axis variable
+
+```{r }
+ggplot(data = penguins,
+       mapping = aes(x = bill_depth_mm))
+
+```
+
+## After that adding variable to y-axis.
+
+```{r }
+ggplot(data = penguins,
+       mapping = aes(x = bill_depth_mm, y = bill_length_mm))
+```
+
+## Create a Scatter Plot for bill_depth_mm and bill_length_mm
+
+```{r }
+ggplot(data = penguins,
+       mapping = aes(x = bill_depth_mm, y = bill_length_mm)) + geom_point()
+```
+
+# Aesthetics for Scatter Plot
+
+## Adding color
+```{r }
+ggplot(
+  data = penguins,
+  mapping = aes(x = bill_depth_mm, y = bill_length_mm, color = species)
+) + geom_point() 
+```
+
+## Adding title and subtitle
+
+```{r }
+ggplot(
+  data = penguins,
+  mapping = aes(x = bill_depth_mm, y = bill_length_mm, color = species)
+) + geom_point() + labs(title = "Penguin bill length by depth", subtitle = "Dimensions for Adelie, Chinstrap, Gentoo penguins")
+```
+
+## Customize the axis labels using the x and y options
+
+```{r }
+ggplot(
+  data = penguins,
+  mapping = aes(x = bill_depth_mm, y = bill_length_mm, color = species)
+) + geom_point() + labs(title = "Penguin bill length by depth", subtitle = "Dimensions for Adelie, Chinstrap, Gentoo penguins", x = "Bill depth (mm)" , y = "Bill length (mm)")
+```
+
+## Customizing the legend title and plot caption
+
+
+```{r }
+ggplot(
+  data = penguins,
+  mapping = aes(x = bill_depth_mm, y = bill_length_mm, color = species)
+) + geom_point() + labs(title = "Penguin bill length by depth", subtitle = "Dimensions for Adelie, Chinstrap, Gentoo penguins", x = "Bill depth (mm)" , y = "Bill length (mm)", caption = "Source: Palmer Station LTER/palmerpenguins package", color = "Species")
+```
+
+## Lastly, we use a color blind friendly palette.
+
+```{r }
+ggplot(
+  data = penguins,
+  mapping = aes(x = bill_depth_mm, y = bill_length_mm, color = species)
+) + geom_point() + labs(title = "Penguin bill length by depth", subtitle = "Dimensions for Adelie, Chinstrap, Gentoo penguins", x = "Bill depth (mm)" , y = "Bill length (mm)", caption = "Source: Palmer Station LTER/palmerpenguins package", color = "Species") + scale_color_viridis_d()
+
+```
+
+
+# Mapping vs Setting
+
+## Mapping flipper_length_mm to the alpha aesthetic.
+
+```{r }
+ggplot(penguins,
+       aes(x = bill_depth_mm,
+           y = bill_length_mm,
+           size = body_mass_g,
+           alpha = flipper_length_mm)) + 
+  geom_point()
+
+```
+
+## Setting the alpha aesthetic to be 0.50.
+
+```{r }
+ggplot(penguins,
+       aes(x = bill_depth_mm,
+           y = bill_length_mm)) + 
+  geom_point(size = 2, alpha = 0.5)
+
+```
+
+##  Is there any missing data? What is the plot doing with the missing values? Hint: consider using the skim() function from the skimr package to assess missingness.
+
+
+```{r }
+skim(penguins)
+```
+
+## Answer: Yes, there are missing data in Sex, bill_length_mm, bill_depth_mm, flipper_length_mm and body_mass_g. The ggplot() function, by default, will ignore missing values in the variables used for mapping aesthetics (x, y, and color in this case) and plot the available data points.
+
+## To handle missing values explicitly, we would need to pre-process the dataset by removing or imputing missing values before creating the plot.
+
+```{r }
+# Remove rows with missing values
+penguins_clean <- na.omit(penguins) #Now we have 333 obs instead of 344 
+
+# Create the plot
+ggplot(data = penguins_clean, mapping = aes(x = bill_depth_mm, y = bill_length_mm, color = species)) +
+  geom_point() +
+  labs(title = "Penguin bill length by depth",
+       subtitle = "Dimensions for Adelie, Chinstrap, Gentoo penguins",
+       x = "Bill depth (mm)",
+       y = "Bill length (mm)",
+       caption = "Source: Palmer Station LTER/palmerpenguins package",
+       color = "Species")
+```
+
+
