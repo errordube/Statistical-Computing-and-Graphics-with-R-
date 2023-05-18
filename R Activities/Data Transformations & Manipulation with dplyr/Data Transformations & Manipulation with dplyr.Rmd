@@ -1,0 +1,343 @@
+---
+title: "Data Transformations & Manipulation with dplyr"
+author: "Aditya Dube"
+header-includes:
+  \usepackage{fvextra}
+  \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Loading Packages
+
+```{r }
+library(tidyverse)
+library(lubridate)
+library(knitr)
+library(skimr)
+```
+
+## Loading the dataset
+
+```{r }
+miFlights <- read_csv("miFlights2019-2021.csv")
+
+skim(miFlights)
+```
+
+```{r }
+glimpse(miFlights)
+```
+
+
+
+## How many variables and how many observations are in this data set?
+## Answer: There are 37 variables and 463818 observations
+
+## Are there any notable patterns of missing values?
+## Answer: It's a big dataset, It appears that weather variables i.e. "temp" "dewp" "humid" "precip" "pressure" there's a lot of missing values in these columns. 
+
+## Create a bar chart showing how many flights departed out of each airport (origin) using the count() and geom_col() functions. Also sort the bars by descending height using the fct_reorder() function.
+
+```{r }
+
+miFlights %>% count(origin) %>% ggplot(aes(x = fct_reorder(origin, - n), y = n)) + geom_col(fill = "dodgerblue", color="black") + labs( 
+  title ="Michigan departing flights, 2019-2021",
+  x = "Airports",
+  y = "Number of flights",
+  caption ="Datasource: anyflights R package") + theme_bw()
+```
+
+
+## Selecting all flights on January 1st in the data set, create a new object called janFlights
+
+```{r }
+janFlights <- miFlights %>% filter(month == 1, day == 1)
+janFlights %>% slice_head(n = 5)
+```
+
+
+## Suppose we want to create a data set called dec25 that contains flight data from December 25th. What code would we need using the filter() function to create dec25?
+
+
+```{r }
+dec25 <- miFlights %>% filter(month == 12, day == 25)
+dec25 %>% slice_head(n = 5)
+```
+
+
+##  Find all flights that departed in November or December, creating an object called novDec.
+
+```{r }
+novDec <- miFlights %>% filter(month == 11 | month == 12)
+novDec %>% slice_head(n = 5)
+```
+
+
+##  Find all flights that departed in November or December using the %in% operator, creating an object called novDec.
+
+```{r }
+novDec <- miFlights %>% filter(month %in% c(11,12))
+novDec %>% slice_head(n = 5)
+```
+
+
+## Select all flights except those in the months of November and December using !.
+
+```{r }
+notNovDec <- miFlights %>% filter(!(month == 11 | month == 12))
+notNovDec %>% slice_head(n = 5)
+```
+
+## Knowing that arr_delay and dep_delay represent the arrival and departure delays in minutes respectively, what data set is produced using the code below?
+
+```{r }
+#It will include flights with arrival and departure delays that are 120 minutes or less.
+dplyr::filter(miFlights, !(arr_delay > 120 | dep_delay > 120))
+
+#It will include flights where both the arrival and departure delays are 120 minutes or less. It is equivalent to the previous code
+dplyr::filter(miFlights, arr_delay <= 120, dep_delay <= 120)
+
+```
+
+
+## What does running the code below produce?
+## Answer: NA > 5 #NA ; 10 == NA #NA ; NA + 10 #NA ; NA / 2 #NA
+
+## How about the following code: NA == NA
+## Answer: NA
+
+## Create a new object called miFlightsComplete where all departure times are non-missing, and miFlightsMiss where all departure times are missing
+
+```{r }
+miFlightsMiss <- miFlights %>% filter(is.na(dep_time))
+miFlightsMiss %>% slice_head(n = 5)
+
+miFlightsComplete <-   miFlights %>% filter(!(is.na(dep_time)))
+miFlightsComplete %>% slice_head(n = 5)
+```
+
+## Sort miFlights by the day of the flight (smallest to largest), and print the first 4 columns and 5 rows of the resulting data set using the slice_head() function.
+
+```{r }
+miFlights %>% arrange(day) %>% select(1:4) %>% slice_head(n=5)
+```
+
+## Sort miFlights by the day of the flight (largest to smallest), and print the first 4 columns and 5 rows of the resulting data set using the slice_head() function.
+
+```{r }
+miFlights %>% arrange(desc(day)) %>% select(1:4) %>% slice_head(n=5)
+```
+
+
+## Sort miFlights by the year, month, and day of the flight.
+
+```{r }
+miFlightsorted <- miFlights %>% arrange(year, month, day)
+miFlightsorted %>% slice_head(n = 5)
+```
+
+
+# You Try Section
+
+## Sort miFlights to find the 3 most delayed flights (arr_delay), and the 3 that left the earliest relative to their scheduled departure (dep_delay).
+
+```{r }
+miFlights %>% arrange(desc(arr_delay)) %>% slice_head(n=3)
+
+miFlights %>% arrange(dep_delay) %>% slice_head(n=3)
+```
+
+## Sort miFlights to find the 3 fastest (highest speed) flights.
+
+```{r }
+miFlights %>% arrange( desc( distance / air_time)) %>% slice_head(n=3)
+```
+
+## For flights coming out of GRR, find the 3 flights that traveled the farthest (distance) and that arrived the earliest in the morning (arr_time) simultaneously.
+
+```{r }
+miFlights %>% filter(origin == "GRR") %>% arrange(desc(distance), arr_time) %>% slice_head(n=3)
+```
+
+
+##  Drop the year and month columns from miFlights creating a new data set called miDropped.
+
+```{r }
+miDropped <- miFlights %>% select(-month, -year)
+miDropped %>% slice_head(n=3)
+```
+
+## Drop all variables between year and day columns (inclusive) from miFlights creating a new data set called miDropped2.
+
+```{r }
+miDropped2 <- miFlights %>% select(-(year:month))
+miDropped2 %>% slice_head(n=3)
+```
+
+# You Try Section
+
+## Create a subset of the miFlights data set called timeFlights that only contains variables that end with the word “time”.
+
+```{r }
+timeFlights <- miFlights %>% select(ends_with("time"))
+timeFlights %>% slice_head(n=3)
+```
+
+## Create a new data frame called departureInfo that only has variables that start with “dep”
+
+```{r }
+departureInfo <- miFlights %>% select(starts_with("dep"))
+departureInfo %>% slice_head(n=3)
+```
+
+## Create a new data frame call newFlights by rearranging the columns of the full miFlights data set so that flight number (flight), origin (origin), and destination (dest) are provided first, then all other columns except the tail number (tailnum).
+
+```{r }
+newFlights <- miFlights %>% select(flight, origin, dest, everything(), -tailnum)
+newFlights %>% slice_head(n=3)
+```
+
+## Extending the code provided with a single call to mutate(), create a new variable, speed, that is equal to distance divided by air_time, producing a new data set called flightSpeeds.
+
+```{r }
+flights_sml <- miFlights %>% select(ends_with("delay"), distance, air_time)
+
+flightSpeed <- flights_sml %>% mutate(gain = dep_delay - arr_delay, speed = 60*distance / air_time)
+
+flightSpeed %>% slice_head(n=3)
+```
+
+
+##  Create a plot showing the relationship between the speed and time gain of each flight, adding appropriate axis and title labels.
+
+```{r }
+flightSpeed %>% ggplot(aes(x =speed,
+                            y = gain)) +
+  geom_point() +
+  labs(title = "Michigan flights gains by speed 2019-2021",
+       x = "Speed (mph)", 
+       y = "Gain (min)",
+       color = "Distance (miles)",
+       caption = "data source: anyFlights R package" )
+
+```
+
+
+##  Add color to the plot to display the distance the flight traveled as well. Is there a noticeable pattern?
+
+```{r }
+flightSpeed %>% ggplot(aes(x =speed,
+                            y = gain,
+                           color = distance)) +
+  geom_point(alpha = .2) +
+  labs(title = "Michigan flights gains by speed 2019-2021",
+       x = "speed (mph)", 
+       y = "Gain (min)",
+       color = "Distance (miles)",
+       caption = "data source: anyFlights R package" ) +
+  theme(legend.position = "bottom")
+
+#There is a noticeable pattern i.e It's a U shaped plot, it's like having two distribution 
+
+```
+
+
+# Group-wise operations and statistics with group_by() & summarize()
+
+```{r }
+miFlights %>% group_by(year, month, day) %>% 
+summarize(delay = mean(dep_delay, na.rm = TRUE)) %>% 
+  slice_head(n = 5)
+```
+
+```{r}
+delaySummary <- miFlights %>% group_by(carrier_name) %>% 
+  summarize(Delay = mean(arr_delay, na.rm = T))
+```
+
+##  Reproduce the waterfall plot below using this summary table.
+
+```{r }
+delaySummary %>% ggplot(aes(x = fct_reorder(carrier_name, Delay),
+                            y = Delay,
+                            fill = Delay > 0)) +
+  geom_col() +
+  labs(title = "Average delay flights by Carrier \n Michigan flights, 2019-2021",
+       x = "Carrier",
+       y = "Delay (minutes)") +
+  scale_fill_manual(values = c("red", "blue")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 60, vjust = .7), legend.position = "none")
+```
+# You Try Section 
+
+## Create a data frame summarizing the median flight delay (arr_delay) by month. Which month has the worst delays? In which month are flights most early / on-time?
+
+```{r }
+monthlyAirportDelays <- miFlights %>% group_by(month, origin) %>% 
+  summarize(Delay = median(arr_delay, na.rm = T))
+
+
+# Month which has worst Delays: 2
+# Month flights are most early/on-time: 4
+```
+## Which type of plot would be most useful for displaying the typical delay each month? Creating and viewing this plot, are there any apparent trends?
+
+```{r }
+# To display the typical delay each month based on the median flight delay statistics, a line plot as a line plot can show the trend of delays over time.
+
+monthlyAirportDelays %>% ggplot(aes(x = month,
+                            y = Delay,
+                            color = origin)) +
+  geom_line() +
+  labs(title = "Monthly Arrival delays",
+      subtitle = "Michigan flights, 2019-2021",
+       x = "Month",
+       y = "Median Delay (minutes)",
+       caption = "data source: anyFlights R package" ) +
+  scale_x_continuous(breaks = 1:12) +
+  theme_bw()
+```
+
+## Extend the plot in 2. by faceting by where the flight departed from (origin). You will need to use group_by() again to do this. What are your observations?
+
+```{r }
+monthlyAirportDelays %>% ggplot(aes(x = month,
+                            y = Delay,
+                            color = origin)) +
+  geom_line() +
+  labs(title = "Monthly Arrival delays",
+      subtitle = "Michigan flights, 2019-2021",
+       x = "Month",
+       y = "Median Delay (minutes)",
+       caption = "data source: anyFlights R package" ) + facet_wrap(~ origin)+
+  scale_x_continuous(breaks = 1:12) +
+  theme_bw()
+```
+
+## Bonus (optional): Create a line chart showing the average daily flight delay across time for each of the major airports
+
+```{r }
+monthlyAirportDelaysMean <- miFlights %>% group_by(month, origin) %>% 
+  summarize(Delay = mean(arr_delay, na.rm = T))
+```
+```{r }
+monthlyAirportDelaysMean %>% ggplot(aes(x = month,
+                            y = Delay,
+                            color = origin)) +
+  geom_line() +
+  labs(title = "Monthly Arrival delays",
+      subtitle = "Michigan flights, 2019-2021",
+       x = "Month",
+       y = "Mean Delay (minutes)",
+       caption = "data source: anyFlights R package" ) + 
+  scale_x_continuous(breaks = 1:12) +
+  theme_bw()
+```
