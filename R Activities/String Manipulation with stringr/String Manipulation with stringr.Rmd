@@ -1,0 +1,266 @@
+---
+title: "String Manipulation with stringr"
+author: "Aditya Dube"
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Loading Packages
+
+```{r }
+library(tidyverse)
+library(skimr)
+library(stringr)
+library(lubridate)
+```
+
+
+# Character Strings
+
+## Importing Dataset 
+
+```{r }
+# Variables to keep
+keeps <- c("track_name", "youtube_title", "youtube_duration", "full_lyrics")
+
+# Importing CSV file
+swiftSongs <- read_csv("https://raw.githubusercontent.com/dilernia/STA418-518/main/Data/swiftSongs.csv") %>% select(keeps)
+
+```
+
+
+##  Explore high-level characteristics of the data using the glimpse() and skim() functions.
+
+```{r }
+glimpse(swiftSongs)
+skim(swiftSongs)
+```
+
+
+# Matching Strings
+
+```{r }
+# Displaying lyrics
+swiftSongs %>% filter(track_name == "It’s Nice To Have A Friend") %>% 
+  pull(full_lyrics)
+
+```
+
+```{r }
+# Detecting if a string contains the substring 'Taylor'
+str_detect(string = c("Taylor Swift", "Taylor Lautner", "Harry Styles"),
+           pattern = "Taylor")
+
+```
+
+
+## Using the str_detect() and mutate() functions, add a new boolean variable called contains_midnight to swiftSongs that indicates whether or not a song’s lyrics contain the word “midnight”. 
+
+```{r }
+swiftSongs <- swiftSongs %>% mutate(contains_midnight = str_detect(full_lyrics, "\\bmidnight\\b")) 
+
+```
+
+## How many of Taylor’s songs mention the word “midnight”?
+## Answer: 5
+
+```{r }
+sum(swiftSongs$contains_midnight)
+```
+## How many of Taylor’s songs mention the word “midnight” or “Midnight”?
+## Answer : 6
+
+```{r }
+swiftSongs <- swiftSongs %>%
+  mutate(contains_midnight_or_Midnight = str_detect(full_lyrics, regex("\\bmidnight\\b|\\bMidnight\\b")))
+
+sum(swiftSongs$contains_midnight_or_Midnight)
+```
+## Using the str_count() and mutate() functions, add a new variable called love_count to swiftSongs that indicates how many times each song mentions the word “love”.
+
+```{r }
+
+swiftSongs <- swiftSongs %>% mutate(love_count = str_count(full_lyrics, pattern = "love"))
+```
+
+
+## Which song mentions love the most times, and how many times is it mentioned?
+
+```{r }
+song_with_max_love <- swiftSongs %>%
+  filter(love_count == max(love_count)) %>%
+  slice_max(love_count)
+
+# Extract the song name and the love count
+song_name <- song_with_max_love$youtube_title
+max_love_count <- song_with_max_love$love_count
+
+song_name
+max_love_count
+
+```
+
+
+# Modifying Strings
+
+## Create a new variable called youtube_time that is the same as youtube_duration, but with a : symbol replacing the M.
+
+```{r }
+
+swiftSongs <- swiftSongs %>%
+  mutate(youtube_time = str_replace(youtube_duration, "M", ":"))
+
+
+```
+
+
+## Modify youtube_time by removing the P, T, and S letters.
+
+```{r }
+swiftSongs <- swiftSongs %>%
+  mutate(youtube_time = str_remove_all(youtube_time, pattern = "P|T|S"))
+
+```
+
+
+##  Modify youtube_time to add  0’s when needed using the case_when() function together with str_replace_all() and str_length().
+
+```{r }
+swiftSongs <- swiftSongs %>%
+  mutate(youtube_time = case_when(
+    str_length(youtube_time) == 2 ~ str_c(youtube_time, "00"),
+    str_length(youtube_time) == 3 ~ str_replace_all(youtube_time, pattern = ":", replacement = ":0"),
+    TRUE ~ youtube_time
+  ))
+```
+
+
+## Coerce youtube_time to be a special date / time variable using the parse_date_time() function from the lubridate package using the code below
+
+```{r }
+# Coercing youtube_time to a date / time variable
+swiftSongs <- swiftSongs %>% 
+  dplyr::mutate(youtube_time = lubridate::parse_date_time(youtube_time, orders = "%M:%S"))
+
+```
+
+
+## Use the minute() and second() functions from the lubridate package, create a new variable, song_duration_s that gives the song duration in seconds using the code below
+
+```{r }
+# Creating song_duration_s variable
+swiftSongs <- swiftSongs %>% 
+  dplyr::mutate(song_duration_s = lubridate::second(youtube_time) + 
+                               60*lubridate::minute(youtube_time))
+```
+
+## The escape sequence \\w+ can be used to match any ‘word’ character (although it very slightly over counts). Create a new variable song_words equal to the number of words in the song using the str_count() function and the full_lyrics variable.
+
+```{r }
+# Creating song_words variable
+swiftSongs <- swiftSongs %>% 
+  dplyr::mutate(song_words = str_count(full_lyrics, pattern = "\\w+"))
+
+```
+
+
+## Reproduce the plot below showing the relationship between the duration of each song in seconds and its number of words. Hint: to match the style of the points, use fill = '#01a7d9', pch = 23, color = '#7d488e' inside of the geom_point() layer.
+
+```{r }
+ggplot(data = swiftSongs, aes(x= song_duration_s,y= song_words)) + geom_point(fill = '#01a7d9', pch = 23, color = '#7d488e') + theme_bw() + labs(
+  title ="Number of words by Taylor Swift song duration",
+  x = "Song duration (seconds)",
+  y = "Number of words in lyrics",
+  caption = "Data source: geniusr R package"
+)
+
+```
+
+
+
+# Capitalization and spacing
+
+```{r }
+# Setting all characters to lowercase
+str_to_lower("It’s nice to have a friend")
+## [1] "it’s nice to have a friend"
+# Setting all characters to uppercase
+str_to_upper("It’s nice to have a friend")
+## [1] "IT’S NICE TO HAVE A FRIEND"
+# Setting all characters to title case
+str_to_title("It’s nice to have a friend")
+
+```
+
+
+```{r }
+# Removing spaces at start and end of string
+str_trim(" Best believe I'm still bejeweled     When I walk in the room     I can still make the whole place shimmer ")
+## [1] "Best believe I'm still bejeweled     When I walk in the room     I can still make the whole place shimmer"
+# Removing spaces at start and end of string and repetitive spaces
+str_squish(" Best believe I'm still bejeweled     When I walk in the room     I can still make the whole place shimmer ")
+
+```
+
+
+# Bonus (optional)
+
+## Using the title of the YouTube video for each song, create a variable indicating whether or not the video is an official music video, official lyric video, or other type of video.
+
+
+```{r }
+swiftSongs <- swiftSongs %>%
+  mutate(video_type = case_when(
+    str_detect(youtube_title, "(?i)official\\s+music\\s+video") ~ "Official Music Video",
+    str_detect(youtube_title, "(?i)official\\s+lyric\\s+video") ~ "Official Lyric Video",
+    TRUE ~ "Other"
+  ))
+
+```
+
+
+## Use the str_glue() function in tandem with ggplot to create a scatter plot showing the relationship between the total number of characters in each song’s lyrics (full_lyrics) and the total number of characters in each song’s title (track_name), including the correlation between the two variables dynamically in the subtitle.
+
+```{r }
+swiftSongs <- swiftSongs %>%
+  mutate(total_lyrics_chars = str_length(full_lyrics),
+         total_title_chars = str_length(youtube_title))
+
+# Calculate the correlation between the two variables
+correlation <- cor(swiftSongs$total_lyrics_chars, swiftSongs$total_title_chars)
+
+# Create the scatter plot with dynamic correlation subtitle
+ggplot(swiftSongs, aes(x = total_lyrics_chars, y = total_title_chars)) +
+  geom_point() +
+  labs(x = "Total Lyrics Characters", y = "Total Title Characters",
+       subtitle = str_glue("Correlation: {correlation}")) +
+  theme_bw()
+
+
+```
+
+# Making a ☁️Word Cloud☁️
+
+```{r }
+library(wordcloud2) 
+library(tidytext)
+
+# Tallying up frequency of words in all songs
+wordFreqs <- swiftSongs %>% unnest_tokens(word, full_lyrics) %>% 
+  count(word) 
+
+# Removing 'stop words' (common but not very meaningful words)
+wordFreqs <- wordFreqs %>% anti_join(stop_words)
+
+# Creating word cloud
+wordcloud2(wordFreqs, size=1.6, color='random-dark',shape = 'star')
+
+```
+
