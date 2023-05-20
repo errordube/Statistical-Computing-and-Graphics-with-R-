@@ -1,0 +1,220 @@
+---
+title: "Fundamentals of Functions in R"
+author: "Aditya Dube"
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Loading Packages
+
+```{r }
+library(tidyverse)
+library(stringr)
+```
+
+# Example function
+
+## Create the mySum() function, and use it to calculate the sum of 13 and 1989.
+
+```{r }
+mySum <- function(number1, number2) {
+  return(number1 + number2)
+}
+
+# Defaulting to order of arguments in function
+mySum(13, 1989)
+```
+## What happens when we calculate the sum of NA and 1989?
+## Answer: It is NA
+
+```{r }
+mySum(NA, 1989)
+```
+# Best practices
+
+## Copy the code creating the myNewSum() function below and add comments to communicate the purpose of different parts of the code.
+
+```{r }
+# The function myNewSum calculates the sum of two numbers, number1 and number2.
+# It has an optional argument remove.na which, if set to TRUE, replaces any NA values with 0 before performing the sum.
+
+myNewSum <- function(number1, number2, remove.na = TRUE) {
+  # Check if remove.na is set to TRUE
+  if(remove.na) {
+    # If remove.na is TRUE, replace NA values with 0 using ifelse() function
+    # Add number1 and number2 after replacing NA values with 0
+    calcSum <- ifelse(is.na(number1), 0, number1) + 
+               ifelse(is.na(number2), 0, number2)
+  } else {
+    # If remove.na is FALSE, simply add number1 and number2
+    calcSum <- number1 + number2
+  }
+  
+  # Return the calculated sum
+  return(calcSum)
+}
+
+myNewSum(1,3)
+```
+
+##  Read the source code for each of the following three functions, determine the purpose of each function, and propose better function names.
+
+## Answer: The first i will be changing is the naming convention f1, f2 and f3 are poor naming convention
+
+```{r }
+startsWithPrefix <- function(string, prefix) {
+  str_sub(string, 1, nchar(prefix)) == prefix
+}
+startsWithPrefix("Hello, world!", "Hello") 
+
+removeLastElement <- function(x) {
+  if (length(x) <= 1) return(NULL)
+  x[-length(x)]
+}
+removeLastElement(c(1, 2, 3, 4))
+
+harmonicMean <- function(x) {
+  1 / (mean(1 / x))
+}
+harmonicMean(c(2, 4, 6)) 
+```
+
+## Create a new function to calculate the geometric mean of a vector of numbers which is equal to the nth root of the product of n numbers.
+
+```{r }
+geometricMean <- function(x) {
+  if (length(x) == 0) {
+    stop("Input vector must not be empty.")
+  }
+  
+  if (any(x <= 0)) {
+    stop("Input vector must contain positive numbers only.")
+  }
+  
+  n <- length(x)
+  geom_mean <- prod(x)^(1/n)
+  
+  return(geom_mean)
+}
+
+geometricMean(c(5,2))
+```
+
+# Conditional execution, warnings, and errors
+
+## Extend / modify the calcSqrt() function to have an error instead of a warning occur if the input number is negative. Use calcSqrt() to try to calculate the square root of 4 and -9.
+
+```{r error=TRUE}
+calcSqrt <- function(val) {
+  if (val >= 0) {
+    return(val^0.5)
+  } else {
+    stop("val is negative but must be >= 0!")
+    return(NaN)
+  }
+}
+calcSqrt(4)
+calcSqrt(-9)
+```
+
+##  Create a function called is.whole.number(), which checks if a given value is a whole number (e.g., 0, 1, 2, …) or not.
+
+```{r }
+is.whole.number <- function(value) {
+  if (is.integer(value) || (is.numeric(value) && value %% 1 == 0)) {
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+}
+is.whole.number(4)    # Returns TRUE
+is.whole.number(3.0)  # Returns TRUE
+is.whole.number(3.5)  # Returns FALSE
+```
+## The ^ operator raises a number to a specified power in R. Create a function that raises a number to a specified power, and returns a warning and an NaN value if the number is negative and the power is not a whole number.
+
+```{r }
+raiseToPower <- function(base, exponent) {
+  if (base >= 0 || is.whole.number(exponent)) {
+    return(base^exponent)
+  } else {
+    warning("Base is negative and exponent is not a whole number!")
+    return(NaN)
+  }
+}
+# Use your function to calculate 4^(2), (-9)^(2), 3^(1/3), and (-3)^(1/3).
+raiseToPower(4, 2)
+raiseToPower(-9, 2)
+raiseToPower(3, (1/3))
+raiseToPower(-3, (1/3))
+```
+# The ifelse() function
+
+## Create the myNewSum() function, and use it to calculate the sum of 13 and 1989
+
+```{r }
+# Creating a function called mySum with 2 required arguments, 1 optional argument
+myNewSum <- function(number1, number2, remove.na = TRUE) {
+  if(remove.na) {
+    calcSum <- ifelse(is.na(number1), 0, number1) + 
+         ifelse(is.na(number2), 0, number2)
+  } else {
+    calcSum <- number1 + number2
+  }
+  return(calcSum)
+}
+```
+
+## What happens when we calculate the sum of NA and 1989 using myNewSum()?
+
+```{r }
+myNewSum(NA, 1989)
+#It return 1989 
+```
+# Logical operators
+
+##  Create a function that takes a numeric vector as input, and returns a single boolean value indicating whether or not the vector has any negative values.
+
+```{r }
+hasNegativeValues <- function(vector) {
+  any(vector < 0)
+}
+hasNegativeValues(c(1, 2, -3, 4))
+```
+
+## Does the code (1:4 < 4) & (1:4 > 1) produce the same result as (1:4 < 4) && (1:4 > 1)? Which code achieves what appears to be its intended purpose?
+
+## Answer: No, the code (1:4 < 4) & (1:4 > 1) does not produce the same result as (1:4 < 4) && (1:4 > 1). The & operator performs element-wise logical AND operation on the corresponding elements of the two vectors, while the && operator performs a single logical AND operation considering only the first element of each vector.
+
+
+# Bonus (optional)
+
+## Write a function to check if a number is even or odd that returns a vector containing the values “even”, “odd”, or “not an integer” depending on its input.
+
+```{r }
+checkEvenOdd <- function(nums) {
+  result_x <- sapply(nums, function(num) {
+    if (is.whole.number(num)) {
+      if (num %% 2 == 0) {
+        return("even")
+      } else {
+        return("odd")
+      }
+    } else {
+      return("not an integer")
+    }
+  })
+  return(result_x)
+}
+
+checkEvenOdd(c(5, 6, 7, 8))
+
+
+```
