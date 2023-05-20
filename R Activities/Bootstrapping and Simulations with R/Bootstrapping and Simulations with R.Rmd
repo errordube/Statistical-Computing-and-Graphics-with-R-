@@ -1,0 +1,432 @@
+---
+title: "Bootstrapping and Simulations with R"
+author: "Aditya Dube"
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Loading Packages
+
+```{r }
+library(tidyverse)
+library(stringr)
+library(broom)
+library(ggthemes)
+library(moments)
+```
+
+# Sampling from vectors
+
+## Use the sample function to simulate 100000 dice rolls, storing the result in a vector called rolls. What proportion of rolls were each number?
+
+```{r }
+rolls <- sample(1:6,100000, replace = TRUE)
+table(rolls) / length(rolls)
+```
+
+## Using the rle() function, what are the most consecutive rolls with the same die value?
+
+```{r }
+rle_result <- rle(rolls)
+
+# Find the maximum length of consecutive values
+max_consecutive <- max(rle_result$lengths)
+
+# Print the maximum length
+print(max_consecutive)
+```
+## What is the total number of runs of each length?
+
+```{r }
+# Calculate the total number of runs of each length
+runs_lengths <- table(rle_result$lengths)
+
+# Print the results
+print(runs_lengths)
+```
+
+## What is the ratio of the number of runs of length 2 compared to the number of runs of length 1? What about the number of runs of length 3 compared to 2?
+
+```{r }
+# Calculate the ratio of runs of length 2 compared to length 1
+ratio_2_to_1 <- runs_lengths[2] / runs_lengths[1]
+
+# Calculate the ratio of runs of length 3 compared to length 2
+ratio_3_to_2 <- runs_lengths[3] / runs_lengths[2]
+
+# Print the results
+print(ratio_2_to_1)
+print(ratio_3_to_2)
+
+```
+
+## What are these ratios close to?
+## Answer: These are close to 1/6 
+
+# You try
+
+## Randomly select 10 values from the fruit vector🍇🍉🍓🥝🍒that is available from the stringr package, and run your code several times. Does sample() use sampling with or without replacement by default?
+
+```{r }
+sample(fruit, size = 10)
+```
+
+
+## Randomly select 10 values from the fruit vector, sampling with replacement. Resample 10 fruits until you obtain at least one duplicate fruit within a sample.
+
+```{r }
+sample(fruit, size=10, replace=TRUE)
+```
+## Set the seed value to 1989, and then sample 13 values from the fruit vector to reproduce the results below.
+
+```{r }
+set.seed(1989)
+sample(fruit, size = 13)
+```
+
+
+# Sampling from distributions
+
+
+```{r }
+# Set ggplot theme for visualizations
+theme_set(ggthemes::theme_few())
+# Set parameters that will be passed to `stat_function()`
+n <- 1000
+mean <- 0
+sd <- 1
+binwidth <- 0.3 # passed to geom_histogram and stat_function
+myData <- data.frame(x = rnorm(n, mean, sd))
+ggplot(myData, aes(x = x, mean = mean, sd = sd, binwidth = binwidth, n = n)) + geom_histogram(aes(y = ..density..), binwidth = binwidth,
+colour = "white", fill = "cornflowerblue", size = 0.1) +
+stat_function(fun = function(x) dnorm(x, mean = mean, sd = sd),
+color = "firebrick", size = 1) +
+labs(title = "Standard normal distribution",
+x = "Value",
+y = "Density") +
+scale_y_continuous(limits = c(0, 0.5), expand = c(0, 0))
+```
+
+
+## Generate 100,000 values from a standard normal distribution, and calculate an estimate of the median (50th percentile) of the standard normal distribution using the quantile() function.
+
+
+```{r}
+set.seed(2023)
+simValues<-rnorm(n=100000, mean=0, sd=1)
+
+quantile(simValues, probs=0.50)
+```
+
+## Also calculate an estimate of the 97.5th percentile of the standard normal distributionusing the quantile() function. Note that the exact value of the 97.5th percentile can be found using qnorm(p = 0.975).
+
+```{r }
+quantile(simValues, probs=0.975)
+#We can get exact percentile using
+qnorm(p=0.975)
+```
+# Example
+
+## If Spongebob just arrived at the bus stop, what is his expected waiting time until the next bus comes?
+
+```{r }
+set.seed(1234)
+# Set the minimum and maximum waiting time in minutes
+min_waiting_time <- 0
+max_waiting_time <- 20
+
+# Number of Monte Carlo simulations
+num_simulations <- 100000
+
+# Simulate waiting times using the uniform distribution
+waiting_times <- runif(num_simulations, min_waiting_time, max_waiting_time)
+
+# Calculate the expected waiting time
+mean(waiting_times)
+
+
+```
+
+## What is the median waiting time until the next bus comes for Spongebob?
+
+```{r }
+median(waiting_times)
+```
+## What is Spongebob’s expected waiting time until he catches a bus back to the Krusty Krab with Patrick?
+
+```{r }
+set.seed(1234)
+# Set the waiting time parameters for Spongebob's bus
+spongebob_min_waiting_time <- 0
+spongebob_max_waiting_time <- 20
+
+# Set the waiting time parameters for Patrick's bus
+patrick_min_waiting_time <- 0
+patrick_max_waiting_time <- 30
+
+# Number of Monte Carlo simulations
+num_simulations <- 100000
+
+# Simulate waiting times for Spongebob and Patrick
+spongebob_waiting_times <- runif(num_simulations, spongebob_min_waiting_time, spongebob_max_waiting_time)
+patrick_waiting_times <- runif(num_simulations, patrick_min_waiting_time, patrick_max_waiting_time)
+
+# Calculate the total waiting time until both Spongebob and Patrick catch the bus
+total_waiting_times <- spongebob_waiting_times + patrick_waiting_times + 10
+
+# Calculate the expected waiting time
+expected_waiting_time <- mean(total_waiting_times)
+expected_waiting_time
+```
+
+## What is Spongebob’s median waiting time until he catches a bus back to the Krusty Krab with Patrick?
+
+```{r }
+median(total_waiting_times)
+```
+
+## Construct and interpret a 95% confidence interval for the total waiting time in minutes for Spongebob until a bus comes for him and Patrick to take to the Krusty Krab using the quantile() function.
+
+```{r }
+# Calculate the 95% confidence interval
+quantile(total_waiting_times, probs = 0.95)
+quantile(total_waiting_times, probs = 0.25)
+```
+## Interpret: Spongebob and Patrick can expect to catch a bus back to the Krusty Krab within 52.20574 minutes or less with a 95% probability. Spongebob and Patrick can expect to catch a bus back to the Krusty Krab within 27.2915 minutes or less with a 25% probability.
+
+
+# Permutation & randomization tests
+
+## Example
+
+```{r }
+# Simulating participant blood-pressure changes
+set.seed(1994)
+n1 <- 8
+n2 <- 8
+trialData <- tibble(Participant = 1:(n1 + n2),
+Treatment = rep(c("Drug", "Placebo"), each = c(n1, n2)),
+Change = c(rcauchy(n = n1, location = -3.5, scale = 5),
+rcauchy(n = n2, location = 0, scale = 1)))
+# Two-sample t-test
+tResult <- t.test(x = trialData$Change[which(trialData$Treatment == "Drug")],
+y = trialData$Change[which(trialData$Treatment == "Placebo")],
+alternative = "less")
+```
+
+```{r }
+trialData %>% ggplot(aes(x = Treatment, y = Change,
+                         fill = Treatment)) +
+  stat_boxplot(geom = "errorbar", width = 0.2, coef = 1.5) +
+  stat_boxplot(geom = "boxplot", width = 0.5, coef = 1.5,
+               outlier.shape = 8) +
+  stat_summary(fun = "mean", geom = "point", shape = 23, fill = "black",
+               color = "white") +
+  scale_fill_manual(values = c("#009E73", "#56B4E9")) +
+  coord_flip() +
+  labs(y = "Change in systolic blood-pressure (mmHg)",
+       title = "Comparison of blood-pressure changes") +
+  theme(legend.position = "none")
+```
+
+
+```{r }
+# Generating all permutations
+perms <- combn(1:(n1 + n2), m = n1)
+# Calculating number of permutations
+nperms <- choose(n1 + n2, n1)
+# Instantiating vector for test statistics
+permTs <- vector(length = nperms)
+# Calculating t-test statistic for each permutation
+for (p in 1:nperms) {
+  permTs[p] <- t.test(x = trialData$Change[perms[, p]],
+                      y = trialData$Change[-c(perms[, p])])$statistic
+}
+```
+
+## How many total ways are there to arrange the participants between the two groups?
+
+## Answer: 12870
+
+## Create a histogram displaying the null distribution obtained for the permutation test. What is the distribution centered at?
+
+```{r }
+tibble(t = permTs) %>% ggplot(aes(x = t)) +
+  geom_histogram(color = "white") +
+  labs(title = "Permutation distribution",
+       y = "Frequency") +
+  theme_bw()
+# The distribution is centered at 0
+```
+
+
+## Add vertical lines to the plot to indicate where the 5th percentile is (a red dotted line), and where our observed test statistic is (solid blue line).
+
+```{r }
+tibble(t=permTs) %>% ggplot(aes(x=t))+
+  geom_histogram(color="white")+ 
+  geom_vline(xintercept=quantile(permTs, probs=0.05), 
+             color="red", linetype="dotted")+
+  geom_vline(xintercept=tResult$statistic, 
+             color="blue", linetype="solid")+
+  labs(title = "Permutation distribution",
+       y="Frequency")+
+  theme_bw()
+```
+
+## Calculate the p-value for the permutation test. In this case, the p-value can be calculated as the proportion of permutation test statistics less than or equal to our observed 𝑡-test statistic.
+
+```{r }
+permPvalue<-mean(permTs<=tResult$statistic)
+permPvalue
+```
+## Since the P-value of 0.0404817 is less than 0.05 that is we have evidence at the 5% significance level that our proposesd drug lowers peoples blood pressure more on average than just a placedo.
+
+## Do we reject or fail to reject the null at the 5% significance level?
+## Answer: Reject
+
+
+# Bootstrapping
+
+```{r }
+# Simulating data from distribution
+set.seed(1989)
+n <- 30
+observed <- rchisq(n = n, df = 4) + rnorm(n = n, mean = 0, sd = 1)
+```
+
+## Create a histogram to visualize the simulated data. Describe the data in terms of its number of peaks (e.g., unimodal, bimodal, etc.) and its symmetry.
+
+```{r }
+# Create histogram
+hist(observed, breaks = "FD", main = "Simulated Data", xlab = "Value")
+
+# Describe the data
+# Calculate number of peaks
+peaks <- function(x) {
+  up <- diff(x) > 0
+  down <- diff(x) < 0
+  peaks <- diff(up) < 0 & diff(down) > 0
+  sum(peaks)
+}
+
+num_peaks <- peaks(observed)
+
+# Check symmetry
+symmetry <- ifelse(skewness(observed) < 0.05, "approximately symmetric", "not symmetric")
+
+# Print description
+cat("Number of peaks:", num_peaks, "\n")
+cat("Symmetry:", symmetry)
+```
+
+## What is the sample size for this data set?
+## Answer: 30 
+
+## What is the sample median for this data? 
+
+```{r }
+median(observed)
+```
+
+```{r }
+# Number of bootstrap samples
+B <- 10000
+# Instantiating matrix for bootstrap samples
+boots <- matrix(NA, nrow = n, ncol = B)
+# Sampling with replacement B times
+for (b in 1:B) {
+  boots[, b] <- observed[sample(1:n, size = n, replace = TRUE)]
+}
+```
+
+## Using the generated bootstrap samples, create a bootstrap distribution of sample medians, and visualize this distribution using a histogram.
+
+```{r }
+#Installing vector for bootstrap medians
+bootMedians<-vector(length=B)
+
+#Calculating the median for each of the resamples
+for(b in 1:B) {
+  bootMedians[b]<-median(boots[,b])
+}
+
+#Creating a histogram
+tibble(Median=bootMedians) %>% ggplot(aes(x=Median))+
+  geom_histogram(color="white")+ 
+  labs(title = "Distribution of nonparametric bootstrap medians",
+       y="Frequency")+
+  theme_bw()
+
+```
+
+## Use the bootstrap samples to obtain a nonparametric estimate of the standard error of the sample median.
+
+```{r }
+SEestimate<-sd(bootMedians)
+SEestimate
+```
+
+## Use the bootstrap samples to obtain a nonparametric 95%confidence interval for the sample median.
+
+```{r }
+quantile(bootMedians, probs=0.025)
+quantile(bootMedians, probs=0.975)
+```
+
+## 95% confident that the true median is between 2.09 and 5.07.
+
+
+## Generate 𝐵 = 10, 000 samples from a normal distribution using the estimated mean and standard deviation from the observed data set, and visualize this distribution using a histogram.
+
+```{r }
+# Number of bootstrap samples
+B <- 10000
+
+# Instantiating matrix for bootstrap samples
+paramboots <- matrix(NA, nrow = n, ncol = B)
+xBar<-mean(observed)
+s<-sd(observed)
+
+# Simulating a normal set of 30 values, B times
+for(b in 1:B) {
+paramboots[, b] <- rnorm(n=n, mean=xBar, sd=s)
+}
+
+#Installing vector for bootstrap medians
+bootparamMedians<-vector(length=B)
+
+#Calculating median for each simulated data set
+for(b in 1:B) {
+  bootparamMedians[b]<-median(paramboots[,b])
+}
+
+#Creating a histogram
+tibble(Median=bootparamMedians) %>% ggplot(aes(x=Median))+
+  geom_histogram(color="white")+
+  labs(title = "Distribution of Parametric bootstrap medians",
+       y="Frequency")+
+  theme_bw()
+```
+
+## Obtain a parametric bootstrap estimate of the standard error of the sample median
+
+```{r }
+sd(bootMedians)
+```
+
+## Obtain a parametric bootstrap 95%confidence interval for the sample median.
+
+```{r }
+quantile(bootparamMedians, probs=0.05)
+quantile(bootparamMedians, probs=0.95)
+```
+
+## 95% confident that the true median is between 2.57 and 5.95
