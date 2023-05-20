@@ -1,0 +1,192 @@
+---
+title: "Joining Data with dplyr"
+author: "Aditya Dube"
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Loading Packages
+
+```{r }
+library(tidyverse)
+library(lubridate)
+library(knitr)
+library(skimr)
+```
+
+# Example data: Michigan flights
+
+## Importing Dataset
+
+```{r }
+michiganFlights <- readRDS("fullMiFlights2021.rds")
+```
+
+## Use the View() function to explore the object michiganFlights. What type of object is michiganFlights? What is its length?
+
+
+```{r }
+#View(michiganFlights)
+
+#Type of object is "list"
+class(michiganFlights)
+
+#Length is 5
+length(michiganFlights)
+```
+## Use the following code to create explicit data tables in our global environment.
+
+```{r }
+# Create tibbles in environment from list
+list2env(michiganFlights, envir = .GlobalEnv)
+
+```
+
+## Use the skim() and glimpse() functions to explore characteristics of each of the tables of data, setting the code chunk options to have include = FALSE, but echo = TRUE. Run the code chunk without knitting the document individually to explore patterns of missingness, variable names and types, etc.
+
+```{r Airlines, include = FALSE, echo = TRUE}
+skim(airlines)
+glimpse(airlines)
+```
+
+```{r Airports, include = FALSE, echo = TRUE}
+skim(airports)
+glimpse(airports)
+```
+
+```{r Flights, include = FALSE, echo = TRUE}
+skim(flights)
+glimpse(flights)
+```
+
+
+```{r Planes, include = FALSE, echo = TRUE}
+skim(planes)
+glimpse(planes)
+```
+
+
+```{r Weather, include = FALSE, echo = TRUE}
+skim(weather)
+glimpse(weather)
+```
+
+
+
+
+## The flights and planes data set connect through which variable(s)?
+## Answer: it is connected through "tailnum" variable 
+
+```{r }
+intersect(names(flights), names(planes))
+```
+## The flights and airports data set connect through which variable(s)?
+## Answer: it is connected through "faa" and "origin" variables
+```{r }
+intersect(names(flights), names(airports))
+```
+
+## The flights and weather data set connect through which variable(s)?
+## Answer: it is connected through "year", "month", "day", "origin", "hour", "time_hour" variables
+
+```{r }
+intersect(names(flights), names(weather))
+```
+
+
+## Suppose we wanted to draw (approximately) the route each plane flies from its origin to its destination. Which variables would we need? Which tables would we need to combine?
+
+## Answer: This requires the "flights" and "airports" tables. The "flights" table has the origin ("origin") and destination ("dest") airport of each flight. The "airports" table has the longitude ("lon") and latitude ("lat") of each airport. To get the latitude and longitude for the origin and destination of each flight, requires two joins for "flights" to "airports", once for the latitude and longitude of the origin airport, and once for the latitude and longitude of the destination airport.
+
+
+## Now suppose we wanted to explore typical weather patterns for departing flights at different airports and explore the weather’s relationship with departure delays. Considering the wind speeds and amount of precipitation, which variables would we need for this? Which tables would we need to combine?
+
+## Answer: weather data set(precipitation, wind speed, wind direction year, origin, month, day, and hour) We also need to know flights data set(dep_time, delay, origin, year, month and hour)
+
+
+# Outer joins
+
+## Combine the airlines and flights data frames with left_join() to create a new data set called flightsCarriers.
+
+```{r }
+flightsCarriers <- flights %>% left_join(airlines)
+```
+
+## Calculate the average flight distance for each carrier using the full name of the carriers. Who had the longest flights on average? Who had the shortest?
+
+```{r }
+flightsCarriers %>% group_by(name) %>% 
+  summarise(AvgDistance = mean(distance, na.rm=TRUE)) %>% 
+  arrange(AvgDistance) %>% knitr::kable()
+
+#Endeavor Air Inc. had the shorted AvgDistance
+```
+##  Combine the weather and flights data frames with left_join() to create a new data set called weatherFlights. How many rows does weatherFlights have?
+
+```{r }
+weatherFlights <-weather %>% left_join(flights, by = c("origin", "year", "month", "day", "hour"))
+glimpse(weatherFlights)
+nrow(weatherFlights) #168159 observations
+```
+
+## Combine the flights and weather data frames with left_join() to create a new data set called flightsWeather. How many rows does flightsWeather have?
+
+
+```{r}
+flightWeather <- flights%>%left_join(weather,
+                                    by = c("origin", "year", "month", "day", "hour"))
+
+# How many rows does flightsWeather have? 149445 observations
+nrow(flightWeather)
+```
+## Combine the weather and flights data frames with full_join() to create a new data set called weatherFlightsFull. How many rows does weatherFlightsFull have?
+
+```{r }
+weatherFlightsFull <- flights%>%full_join(weather,
+                                    by = c("origin", "year", "month", "day", "hour"))
+
+# How many rows does flightsWeatherFull have?
+
+nrow(weatherFlightsFull) #168504 observations
+
+```
+
+
+## Considering all of the data we have available, how many flights have missing wind speeds?
+## Answer: 1526 have missing wind speeds.
+
+```{r }
+flightWeather %>% pull(wind_speed) %>% is.na()%>%
+  sum()
+```
+
+
+# Inner joins
+
+## Combine the weather and flights data frames with inner_join() to create a new data set called innerWeatherFlights. How many rows does innerWeatherFlights have?
+
+```{r }
+InnerWeatherFlights <- flights%>%inner_join(weather,
+                                    by = c("origin", "year", "month", "day", "hour"))
+#How many rows does innerWeatherFlights have? 
+nrow(InnerWeatherFlights) #149100 observations
+
+```
+
+
+##  What does the number of rows in innerWeatherFlights and weatherFlights tell us about the data set?
+
+```{r }
+nrow(weatherFlights)
+nrow(InnerWeatherFlights)
+nrow(weatherFlights)-nrow(InnerWeatherFlights)
+```
+## Answer: Some airports had hourly data but no flights depart at that hour
+
