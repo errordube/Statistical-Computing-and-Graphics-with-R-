@@ -1,0 +1,150 @@
+---
+title: "Homework 4: The NHANES Data Set"
+author: "Aditya Dube"
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Question 1
+
+## Part A
+
+```{r }
+library(tidyverse)
+library(skimr)
+```
+
+## Part B
+
+```{r }
+# Loading the NHANES data set
+data(NHANES, package = "NHANES")
+```
+
+
+# Question 2
+
+## Part A
+
+```{r }
+glimpse(NHANES)
+```
+
+
+## Part B
+
+## There are 10,000 rows and 76 columns in the dataset.
+
+
+## Part C
+
+## Based on the output obtained from glimpse(), which type / class of variable is Age? What about BMI and Diabetes?
+
+## Answer: Age is of int type and BMI is dbl and Diabetes is fct. 
+
+
+# Question 3
+
+
+## Part A
+
+```{r }
+skim(NHANES)
+```
+
+
+
+## Part B
+
+## Answer: In fct variable - 'BMICatUnder20yrs' has the most missing values and in numeric variable - 'HeadCirc' has the most missing values
+
+## Part C
+
+```{r }
+NHANES_sub <- select(NHANES, 1:5)
+glimpse(NHANES_sub)
+skim(NHANES_sub)
+```
+
+## Part D
+
+```{r }
+count(NHANES, SmokeNow, Diabetes)
+```
+
+## Part E
+
+```{r }
+#Total diabetic people are 760
+sum(NHANES$Diabetes == "Yes", na.rm = TRUE) 
+
+#Total people are not diabetic 9098
+sum(NHANES$Diabetes == "No", na.rm = TRUE)
+```
+
+## Part F
+
+```{r }
+#Missing values are there for diabetes status - 142
+sum(is.na(NHANES$Diabetes))
+```
+
+## Part G
+
+```{r }
+#Percentage of people with diabetes among smokers
+sum(NHANES$SmokeNow == "Yes" & NHANES$Diabetes == "Yes", na.rm = TRUE) /
+                           sum(NHANES$SmokeNow == "Yes" & !is.na(NHANES$Diabetes), na.rm = TRUE) * 100
+
+
+#Percentage of people with diabetes among non-smokers
+sum(NHANES$SmokeNow == "No" & NHANES$Diabetes == "Yes", na.rm = TRUE) /
+                               sum(NHANES$SmokeNow == "No" & !is.na(NHANES$Diabetes), na.rm = TRUE) * 100
+
+```
+
+## Part H
+
+## Answer: There is a lower prevalence of diabetes among smokers compared to non-smokers in the given dataset. This result contradicts the general understanding that smoking is associated with an increased risk of diabetes. In most studies, smoking is indeed considered a risk factor for developing diabetes.
+
+
+
+# Question 4
+
+```{r }
+# Printing rows with 5 lowest BMIs
+slice_head(arrange(NHANES, BMI), n = 5)
+```
+
+```{r }
+# Printing rows with 5 lowest BMIs
+NHANES %>% arrange(BMI) %>% slice_head(n = 5)
+```
+
+
+## Part A
+
+
+```{r }
+NHANES %>% arrange(BMI) %>% slice_tail(n = 5)
+```
+
+## Part B
+
+```{r}
+NHANES %>% slice_min(BMI, n = 5) # This one is printing more than 5 rows because of the duplicate value or ties
+
+NHANES %>% slice_min(BMI, n = 5, with_ties = FALSE) # Now this is printing 5 lowest BMI
+NHANES %>% slice_max(BMI, n = 5) # 5 highest BMI
+```
+
+## Part C
+
+## Answer: People with high BMI are overweight,  Higher BMI values is more common in older age groups and also BMI values may vary based on socioeconomic factors, such as access to healthy food, education level, or cultural influences and Lower BMI values are relatively healthier in terms of weight-related conditions.
