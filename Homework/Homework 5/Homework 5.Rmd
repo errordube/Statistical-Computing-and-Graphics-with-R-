@@ -1,0 +1,246 @@
+---
+title: "Homework 5"
+author: "Aditya Dube"
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Packages 
+
+```{r }
+library(stringr)
+library(tidyverse)
+library(flextable)
+library(skimr)
+library(ggplot2)
+library(dplyr)
+library(tidytext)
+library(wordcloud2)
+```
+
+## Question 1
+
+```{r }
+jobs <- read_rds("jobs_data.rds")
+```
+
+```{r }
+#Print and display the first 12 rows of the jobs data frame
+
+flextable(jobs[1:12, -which(names(jobs) == "description")])
+```
+
+## Question 2
+
+```{r }
+skim(jobs)
+```
+
+
+## Answer: No, there are none missing values.
+
+## Question 3
+
+```{r }
+jobs$location <- gsub("Illinois", "IL", jobs$location)
+unique_locations <- unique(jobs$location)
+print(paste(unique_locations))
+```
+
+## Question 4
+
+```{r }
+# Clean job locations using mutate() and str_replace()
+cleaned_jobs <- jobs %>%
+  mutate(location = str_replace(location, "Grand Rapids, MI", "Grand Rapids")) %>%
+  mutate(location = str_replace(location, "Chicago.*", "Chicago")) %>%
+  mutate(location = str_replace(location, "Detroit, MI", "Detroit")) %>%
+  mutate(location = str_replace(location, "Minneapolis, MN", "Minneapolis"))
+
+# Check the updated unique locations
+unique_locations <- unique(cleaned_jobs$location)
+unique_locations
+```
+
+## Question 5
+
+```{r }
+# Calculate the count of jobs per location
+job_counts <- table(cleaned_jobs$location)
+
+# Create a data frame with the location and job count
+job_counts_df <- data.frame(location = names(job_counts), count = as.numeric(job_counts))
+
+# Sort the data frame by job count in descending order
+job_counts_df <- job_counts_df[order(job_counts_df$count, decreasing = TRUE), ]
+
+# Create the bar chart
+ggplot(data = job_counts_df, aes(x = reorder(location, -count), y = count, fill = count)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Location", y = "Number of Jobs", title = "Number of Jobs Posted by Location") +
+  scale_fill_gradient() +
+  theme_bw() +
+  theme(axis.text.x = element_text(vjust = 0.5, hjust = 1),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(size = 14))
+```
+## Question 6
+
+```{r }
+# Define the variations of the word "senior" to be replaced
+senior_variations <- c("Sr\\.", "Sr", "Senior")
+
+# Clean job titles using mutate() and str_replace()
+cleaned_jobs <- mutate(cleaned_jobs, title = str_replace(title, senior_variations[1], "Senior"))
+cleaned_jobs <- mutate(cleaned_jobs, title = str_replace(title, senior_variations[2], "Senior"))
+cleaned_jobs <- mutate(cleaned_jobs, title = str_replace(title, senior_variations[3], "Senior"))
+
+# Check the job title for row 28 before and after the mutation
+print(jobs$title[28])
+print(cleaned_jobs$title[28])
+```
+
+
+
+## Question 7
+
+```{r }
+# Filter the data for remote jobs
+remote_jobs <- cleaned_jobs %>% filter(grepl("remote", title, ignore.case = TRUE))
+
+# Clean the search term variable
+remote_jobs <- remote_jobs %>% mutate(keyword = str_to_title(keyword))
+
+# Calculate the count of remote jobs by location and search term
+job_counts <- remote_jobs %>%
+  group_by(location, keyword) %>%
+  summarize(count = n())
+
+# Create a table using flextable
+table <- flextable(job_counts)
+
+# Set table properties
+table <- set_header_labels(table, location = "Location", keyword = "Search Term", count = "Count")
+table <- set_caption(table, "Number of Remote Jobs by Location and Search Term")
+
+# Display the table
+print(table)
+```
+
+## Question 8
+
+```{r }
+# Split the description into individual words
+words <- cleaned_jobs %>%
+  unnest_tokens(word, description)
+
+# Tally the frequency of words
+wordFreqs <- words %>%
+  count(word, sort = TRUE)
+
+# Display the five most common words across job postings
+top_words <- head(wordFreqs, 5)
+print(top_words)
+```
+
+## Question 9
+
+```{r }
+# Remove stop words from wordFreqs
+wordFreqs <- anti_join(wordFreqs, stop_words)
+
+# Display the five most common words across job postings excluding stop words
+top_words <- head(wordFreqs, 5)
+print(top_words)
+```
+
+
+## Question 10
+
+```{r }
+# Split the description into individual words
+words <- cleaned_jobs %>%
+  unnest_tokens(word, description)
+
+# Tally the frequency of words
+wordFreqs <- words %>%
+  count(word, sort = TRUE)
+
+# Remove stop words
+wordFreqs <- anti_join(wordFreqs, stop_words)
+
+# Filter words based on frequency
+filtered_words <- wordFreqs %>%
+  filter(n >= 500)
+
+# Create a word cloud
+wordcloud2(filtered_words)
+```
+
+## Question 11
+
+```{r }
+# Count the number of job descriptions that mention "salary" or "pay" regardless of case
+mention_count <- sum(str_detect(cleaned_jobs$description, regex("(salary|pay)", ignore_case = TRUE)))
+
+# Count the number of job descriptions that mention a dollar amount
+dollar_amount_count <- sum(str_detect(cleaned_jobs$description, "[$]"))
+
+# Print the results
+print(paste("Number of job descriptions mentioning 'salary' or 'pay':", mention_count))
+print(paste("Number of job descriptions mentioning a dollar amount:", dollar_amount_count))
+```
+
+## Question 12
+
+```{r }
+# Regular expression pattern to match dollar amounts with optional commas
+dollar_pattern_regx <- "\\$\\d{1,3}(,\\d{3})*(\\.\\d{2})?"
+
+# Regular expression pattern to get context (n_char characters) around match dollar amounts
+n_char <- 20
+dollar_context_regx <- str_c("(.{0,", n_char, "})\\$\\d{1,3}(,\\d{3})*(\\.\\d{2})?(.{0,", n_char, "})")
+
+# Extracting dollar amounts from the text.
+# To calculate the annual compensation, salary ranges are averaged to a single number,
+# and hourly wages are multiplied by 40*52 for a 40 hour work week with 52 weeks in a year.
+job_dollars <- cleaned_jobs %>% 
+  mutate(dollar_amount = str_extract_all(description, dollar_pattern_regx),
+         dollar_range = sapply(X = dollar_amount, FUN = function(x){str_c(unique(x), collapse = " - ")}),
+         dollar_context = str_to_lower(sapply(X = str_extract_all(description, dollar_context_regx), 
+                                 FUN = function(x){str_c(unique(x), collapse = " - ")})),
+         dollar_value = sapply(X = dollar_amount, 
+                               FUN = function(x){mean(as.numeric(str_replace_all(x, "[$,]", "")))}) * (1 + str_detect(dollar_context, pattern = "hour|/hr")*52*40)) %>% 
+  dplyr::filter(str_count(dollar_range, pattern = "-") < 2)
+
+```
+
+```{r }
+subset <- job_dollars %>%
+  filter(
+    str_length(dollar_range) > 0,
+    str_detect(dollar_context, pattern = "range|salary|pay|hour|/hr"),
+    dollar_value > 1000,
+    dollar_value < 1e6
+  )
+
+set.seed(1999)  # Set the seed value for reproducibility
+
+# Randomly select 10 jobs from the subset
+random_jobs <- subset %>%
+  slice_sample(n = 10, replace = FALSE)
+
+# Calculate the average offered compensation
+average_compensation <- mean(random_jobs$dollar_value)
+
+# Print the average offered compensation
+print(average_compensation)
+
+```
