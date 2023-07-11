@@ -1,0 +1,197 @@
+---
+title: "Final Project Activity"
+author: "Aditya Dube"
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Packages
+```{r }
+library(tidyverse)
+library(skimr)
+library(naniar)
+library(ggplot2)
+library(dplyr)
+library(maps)
+library(flextable)
+library(plotly)
+```
+# Q1. Import your data into R.
+
+# Importing Fast Food Dataset and Census Dataset
+
+```{r}
+fastFoodData <-  read_csv("fastFoodGeo.csv")
+```
+
+```{r }
+censusData <- read_csv("census_data_full_2008-2021.csv")
+```
+
+# Merging both the datset 
+```{r }
+mergedData <- inner_join(fastFoodData, censusData, by = "geoid")
+```
+
+# Q2. Explore and display high-level characteristics of your data set, e.g., important variables and their types, different levels for factor variables, any patterns of missing values.
+
+```{r }
+# Display the variable names
+names(mergedData)
+```
+
+```{r }
+#Broad overview of a data frame
+skim(mergedData)
+```
+
+```{r}
+# Display the structure of the dataset
+str(mergedData)
+```
+```{r }
+# Display summary statistics of the dataset
+summary(mergedData)
+
+```
+
+```{r }
+# Check for missing values
+missing_values <- sum(is.na(mergedData))
+
+# Creating a bar plot showing the proportion of missing values for each variable
+gg_miss_var(mergedData)
+```
+
+
+
+## Cleaning The Dataset After Merging
+
+# Removing Variables related to Race and Education as there were many missing datas and also removing Website variable.
+
+# Keeping Variables
+```{r }
+cleanedData <- mergedData %>% select(geoid,keys,address,city,country,name,postalCode,province,lat,long,year,population,median_income,median_monthly_rent_cost,median_monthly_home_cost, prop_female,prop_male, prop_poverty)
+```
+
+```{r }
+# Display the structure of the dataset
+str(cleanedData)
+```
+
+```{r }
+# Display summary statistics of the dataset
+summary(cleanedData)
+```
+
+```{r }
+# Check for missing values
+missing_values_cleaned_data <- sum(is.na(cleanedData))
+
+# Creating a bar plot showing the proportion of missing values for each variable
+gg_miss_var(cleanedData)
+```
+
+```{r }
+#Broad overview of a data frame
+skim(cleanedData)
+```
+
+
+# Q3. Obtain at least one table of group-level summary statistics for quantitative variables in your data set
+
+
+```{r }
+# Group-level summary statistics for 'median_income' by 'province'
+summary_table <- cleanedData %>%
+  group_by(province) %>%
+  summarise(mean_median_income = mean(median_income),
+            median_median_income = median(median_income),
+            sd_median_income = sd(median_income),
+            min_median_income = min(median_income),
+            max_median_income = max(median_income))
+
+# Keep only the rows with the maximum values of 'mean_median_income' for each province
+max_mean_income <- summary_table %>%
+  slice_max(n = 1, order_by = mean_median_income)
+
+# Display the row(s) with the maximum mean median income
+max_mean_income
+```
+# Q4. Obtain at least one frequency table showing the cross-section of two categorical variables in your data set. 
+
+```{r }
+# Cross-tabulation of 'city' and 'province'
+frequency_table <- table(cleanedData$city, cleanedData$province)
+
+# Convert the frequency table to a data frame
+frequency_df <- as.data.frame(frequency_table, stringsAsFactors = FALSE)
+
+# Keep only the rows with the highest frequencies for each city
+# Var1 is Cities Names
+top_frequencies <- frequency_df %>%
+  group_by(Var1) %>%
+  slice_max(n = 1, order_by = Freq)
+
+# Display the top frequencies
+top_frequencies
+```
+
+# Q5. Create at least one ggplot visualization for your data, including appropriate labels with units of measurement when applicable and a specified theme
+
+```{r }
+# Create a bar plot of population by province
+bar_plot <- ggplot(data = cleanedData, aes(x = province, y = population)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(x = "Province", y = "Population", title = "Population by Province") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Convert the bar plot to an interactive plot using plotly
+interactive_plot <- ggplotly(bar_plot)
+
+# Display the interactive plot
+interactive_plot
+```
+
+# Q6. Create a data dictionary showcasing the variables used in your analyses. An example R Markdown file showing creation of a data dictionary for the Palmer Penguins data set is available on Blackboard
+
+```{r }
+dataDictionary <- tibble(Variable = colnames(cleanedData),
+                         Description = c("Geographic Region ID",
+                                         "Keys for identification purposes",
+                                         "Address of the location",
+                                         "City where the location is situated",
+                                         "Country of the location",
+                                         "Name of the location",
+                                         "Postal code of the location",
+                                         "Province or state where the location is located",
+                                         "Latitude of the location",
+                                         "Longitude of the location",
+                                         "Year of data collection",
+                                         "Population count",
+                                         "Median income of the location",
+                                         "Median monthly rental cost of housing",
+                                         "Median monthly cost of home ownership",
+                                         "Proportion of population that is female",
+                                         "Proportion of population that is male",
+                                         "Proportion of people 25 and older living in poverty"),
+                         Type = map_chr(cleanedData, .f = function(x){typeof(x)[1]}),
+                         Class = map_chr(cleanedData, .f = function(x){class(x)[1]}))
+
+#Setting theme for flextable
+set_flextable_defaults(
+  font.size = 10, theme_fun = theme_vanilla,
+  padding = 6,
+  background.color = "#EFEFEF")
+
+flextable::flextable(dataDictionary, cwidth = 2)
+```
+
