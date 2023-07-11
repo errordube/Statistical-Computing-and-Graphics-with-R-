@@ -1,0 +1,319 @@
+---
+title: "Homework 6"
+author: "Aditya Dube"
+date: "`r format(Sys.time(), '%A, %B %e, %Y')`"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Packages 
+
+```{r }
+library(stringr)
+library(tidyverse)
+library(flextable)
+library(skimr)
+library(ggplot2)
+library(dplyr)
+library(tidytext)
+library(wordcloud2)
+library(purrr)
+library(janitor)
+```
+
+
+## Q1 Print and display the first 13 rows of standardDeck using the flextable() function from the flextable package.
+
+```{r }
+# Creating standard 52 card deck
+cards <- c(as.character(2:10), "Jack", "Queen", "King", "Ace")
+
+standardDeck <- expand_grid(suite = c("hearts", "diamonds", "clubs", "spades"),
+                        value = cards) %>% 
+  dplyr::mutate(value = as.ordered(fct_relevel(value, cards)))
+
+# Displaying the first 13 rows using flextable
+flextable(standardDeck[1:13,])
+```
+
+# Q2. Next, create a function called shuffle_cards() that randomly shuffles the rows of a tibble object representing a deck of cards. The shuffle_cards() function should have one argument, deck, a tibble with columns suite and value where each row corresponds to a card in the deck, and shuffle_cards() should return a tibble of the same structure, but with its rows randomly arranged / shuffled.
+
+```{r }
+shuffle_cards <- function(deck) {
+  shuffled_deck <- deck %>% sample_n(nrow(deck))
+  return(shuffled_deck)
+}
+
+shuffle_cards(standardDeck)
+```
+# Q3. We will now create a new function called deal_cards() that deals / gives nCards number of cards to a single player. The deal_cards() function should have 2 total arguments: deck, a tibble with columns suite and value where each row corresponds to a card in the card deck, and nCards, the total number of cards to be dealt / given to the player which should have a default value of 5.The deal_cards() function should return a tibble with columns suite and value and nCards number of rows.
+
+```{r }
+deal_cards <- function(deck, nCards = 5) {
+  dealt_cards <- deck %>% sample_n(nCards)
+  return(dealt_cards)
+}
+
+deal_cards(standardDeck, 7)
+
+```
+
+# Q4. Below are functions for detecting if a given hand has a flush, straight, straight flush, or royal flush. Copy and paste these functions for your own use. The hand argument should be a tibble with columns suite and value where each row corresponds to a card in a player’s hand. Create a function called detect_full_house() that has one argument, hand, and returns TRUE if hand has a full house and returns FALSE otherwise.
+
+
+```{r }
+# Create function to detect if a hand has a flush
+detect_flush <- function(hand) {
+  if(length(unique(hand$suite)) == 1) {
+  return(TRUE)
+  } else {
+    return(FALSE)
+  }
+}
+
+# Create function to detect if a hand has a straight
+detect_straight <- function(hand) {
+  
+  # Unique cards
+  ucards <- unique(hand$value)
+  
+  if(length(ucards) < 5) {
+    return(FALSE)
+  }
+  
+  # Sort the values of the hand in ascending order
+  sortedHand <- sort(ucards)
+  
+  # Check if Ace is in hand, and if so, check for 'high' or 'low' straight
+  if("Ace" == sortedHand[5]) {
+    straight <- (sortedHand[1] == "10" & sortedHand[2] == "Jack" &
+                sortedHand[3] == "Queen" & sortedHand[4] == "King") |
+                (sortedHand[1] == "2" & sortedHand[2] == "3" &
+                sortedHand[3] == "4" & sortedHand[4] == "5")
+      
+  } else {
+  # Check if there are any gaps larger than 1 in the sequence of differences 
+  straight <- !any(diff(as.integer(sortedHand)) > 1)
+  }
+  
+  return(straight)
+}
+
+# Create function to detect if a hand has a straight-flush
+detect_straight_flush <- function(hand) {
+  if(detect_flush(hand) & detect_straight(hand)) {
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+}
+
+# Create function to detect if a hand has a royal-flush
+detect_royal_flush <- function(hand) {
+  if(detect_straight_flush(hand) & (min(hand$value) == "10")) {
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+}
+
+detect_full_house <- function(hand) {
+  value_counts <- table(hand$value)
+  
+  if (length(value_counts) == 2) {
+    if (any(value_counts == 2) && any(value_counts == 3)) {
+      return(TRUE)
+    }
+  }
+  
+  return(FALSE)
+}
+
+
+
+```
+
+
+
+# Q5. Create a function called detect_two_pair() that has one argument, hand, and returns TRUE if hand has a two pair and returns FALSE otherwise.
+
+
+```{r }
+detect_two_pair <- function(hand) {
+  value_counts <- table(hand$value)
+  pair_count <- sum(value_counts == 2)
+  
+  if (pair_count >= 2) {
+    return(TRUE)
+  }
+  
+  return(FALSE)
+}
+
+```
+
+
+
+# Q6. Create a function called detect_n_of_kind() that has two arguments, hand, and nkind, where nkind = 2 for detecting a hand with at least one pair, nkind = 3 for detecting a hand with three of a kind, and nkind = 4 for detecting a hand with four of a kind. The detect_n_of_kind() function should return TRUE if hand has the specified n of a kind and return FALSE otherwise. Note that detect_n_of_kind(hand, nkind = 2) should return TRUE if hand has a single pair, a two pair, a three of a kind, or a four of a kind.
+
+```{r }
+detect_n_of_kind <- function(hand, nkind) {
+  value_counts <- table(hand$value)
+  kind_count <- sum(value_counts == nkind)
+  
+  if (kind_count >= 1) {
+    return(TRUE)
+  }
+  
+  return(FALSE)
+}
+
+```
+
+
+
+# Q7.The function calculate_hand() below uses all of the functions we have created to determine the best hand given a set of five cards for a player. Use this function to complete the rest of the assignment.
+
+
+```{r }
+# Creating function to determine hand
+calculate_hand <- function(hand) {
+  
+  straight <- detect_straight(hand)
+  flush <- detect_flush(hand)
+  pair <- detect_n_of_kind(hand, nkind = 2)
+  
+  # Royal flush
+  if(straight & flush) {
+    if(detect_royal_flush(hand)) {
+      return("Royal flush")
+    } else {
+      return("Straight flush")
+    }
+  } else if(flush) {
+    return("Flush")
+  } else if(straight) {
+    return("Straight")
+  } else if(!pair) {
+    return("High card")
+  } else if(pair & detect_n_of_kind(hand, nkind = 4)) {
+    return("Four of a kind")
+  } else if(detect_full_house(hand)) {
+    return("Full house")
+  } else if(detect_n_of_kind(hand, nkind = 3)) {
+        return("Three of a kind")
+  } else if(detect_two_pair(hand)) {
+        return("Two pair")
+  } else {
+        return("One pair")
+  }
+}
+
+```
+
+### Test Hands for Q7.
+
+```{r }
+testHands <- list()
+
+# Should be a royal flush
+testHands$`Royal flush` <- tibble(suite = rep("hearts", times = 5),
+                 value = c("10", "Jack", "Queen",
+                           "King", "Ace"))
+
+# Should be a straight flush
+testHands$`Straight flush` <- tibble(suite = rep("hearts", times = 5),
+                 value = c("Ace", 2:5))
+
+# Should be a four of a kind
+testHands$`Four of a kind` <- tibble(suite = c(rep("hearts", 3), 
+                                 rep("spades", 2)),
+                 value = c(rep("Ace", 4), 7))
+
+# Should be a straight
+testHands$Straight <- tibble(suite = c(rep("hearts", 3), 
+                          rep("spades", 2)),
+                 value = c("Ace", 2:5))
+
+# Should be a full house
+testHands$`Full house` <- tibble(suite = c(rep("hearts", 3), 
+                          rep("spades", 2)),
+                 value = c(rep("Ace", 3), rep("King", 2)))
+
+# Should be a flush
+testHands$Flush <- tibble(suite = rep("hearts", times = 5),
+                 value = c("Ace", 3:6))
+
+# Should be a three of a kind
+testHands$`Three of a kind` <- tibble(suite = c(rep("hearts", 3), 
+                          rep("spades", 2)),
+                 value = c(rep("Ace", 3), 2, 7))
+
+# Should be a two pair
+testHands$`Two pair` <- tibble(suite = c(rep("diamonds", 3), 
+                          rep("clubs", 2)),
+                 value = c(rep("Ace", 2), rep("Jack", 2), 7))
+
+# Should be a one pair
+testHands$`One pair` <- tibble(suite = c(rep("diamonds", 3), 
+                          rep("clubs", 2)),
+                 value = c(rep("Ace", 2), 2, 3, 7))
+
+# Should be a high card
+testHands$`High card` <- tibble(suite = c(rep("diamonds", 3), 
+                          rep("clubs", 2)),
+                 value = c("Ace", "Jack", 2, 3, 7))
+
+# Testing hands
+map_chr(.x = testHands, .f = function(hand) {
+  calculate_hand(hand %>% 
+  dplyr::mutate(value = as.ordered(fct_relevel(value, cards))))
+  })
+
+```
+
+
+# Q8. Create a function called poker_sim() that has two arguments, seed, which specifies a seed value for reproducible random number generation, and deck, which we will supply with standardDeck when calling the function. The poker_sim() function should first set a seed value, shuffle the deck using the shuffle_cards() function, select 5 cards using the deal_cards() function, and then return the result of calculate_hand() on this dealt hand.
+
+```{r }
+poker_sim <- function(seed, deck) {
+  set.seed(seed)
+  shuffled_deck <- shuffle_cards(deck)
+  dealt_cards <- deal_cards(shuffled_deck, nCards = 5)
+  result <- calculate_hand(dealt_cards)
+  return(result)
+}
+
+```
+
+
+# Q9. Implement 10,000 poker hands using the poker_sim() function and the map_chr() function from the purrr package, storing the result of the simulations in a character vector called simRes.
+
+```{r }
+seed <- 123
+num_simulations <- 10000
+
+simRes <- map_chr(1:num_simulations, ~poker_sim(seed + .x, standardDeck))
+
+```
+
+
+# Q10. Summarize the simulations using the tabyl() function from the janitor package and the flextable function from the flextable package to produce a table structured as below. Note that your numbers will likely be slightly different.
+
+```{r }
+summary_table <- simRes %>%
+  tabyl() %>%
+  flextable()
+
+summary_table
+```
+
+
+
+ 
